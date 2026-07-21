@@ -3,12 +3,10 @@
     <div class="max-w-7xl mx-auto flex items-center justify-between h-20 px-8">
 
         <!-- Logo -->
-        <a href="/" class="flex-shrink-0">
-            <img src="/spa/assets/images/logo/logo1.png"
-                 alt="Bien-Être Salon"
-                 class="h-20 w-auto">
-        </a>
-
+        <img src="/spa/assets/images/logo/logo1.png"
+     alt="Bien-Être Salon"
+     class="h-24 w-auto">
+     
         <!-- Menu -->
         <ul class="hidden lg:flex items-center space-x-10 text-white text-sm tracking-wider">
 
