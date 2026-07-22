@@ -100,10 +100,16 @@ class AuthController {
         include_once 'app/view/auth/verify_code.php';
     }
 
-    public function login() {
-        // Si déjà connecté, redirection immédiate vers son tableau de bord
+   public function login() {
+        // Si déjà connecté, redirection immédiate selon le rôle stocké en session
         if (isset($_SESSION['user'])) {
-            header('Location: index.php?action=dashboard');
+            if ($_SESSION['user']['role'] === 'admin') {
+                header('Location: index.php?action=admin_dashboard');
+            } elseif ($_SESSION['user']['role'] === 'employe') {
+                header('Location: index.php?action=staff_dashboard');
+            } else {
+                header('Location: index.php?action=dashboard');
+            }
             exit();
         }
 
@@ -144,7 +150,7 @@ class AuthController {
                         } elseif ($user['role'] === 'employe') {
                             header('Location: index.php?action=staff_dashboard');
                         } else {
-                            header('Location: index.php?action=dashboard'); // Espace client standard
+                            header('Location: index.php?action=dashboard');
                         }
                         exit();
                     }
@@ -154,30 +160,28 @@ class AuthController {
             }
         }
 
-        // Chargement du fichier HTML (avec le bon chemin corrigé pour /view/auth/login.php)
+        // Chargement du fichier HTML
         require_once dirname(__DIR__) . '/view/login.php';
     }
 
     public function logout() {
-    // 1. On vide le tableau de session
-    $_SESSION = [];
+        // 1. On vide le tableau de session
+        $_SESSION = [];
 
-    // 2. On détruit le cookie de session dans le navigateur
-    if (ini_get("session.use_cookies")) {
-        $params = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000,
-            $params["path"], $params["domain"],
-            $params["secure"], $params["httponly"]
-        );
+        // 2. On détruit le cookie de session dans le navigateur
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
+
+        // 3. On détruit la session sur le serveur
+        session_destroy();
+
+        // 4. Redirection vers la page de connexion
+        header('Location: index.php?action=login');
+        exit();
     }
-
-    // 3. On détruit la session sur le serveur
-    session_destroy();
-
-    // 4. Redirection vers la page de connexion
-    header('Location: index.php?action=login');
-    exit();
 }
-} // <--- C'est CETTE accolade qui doit fermer la classe tout à la fin !
-
-

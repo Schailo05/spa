@@ -5,22 +5,23 @@ class MailService {
     private $apiKey;
 
     public function __construct() {
-        // Récupération de la clé API depuis le fichier .env chargé par index.php
-        $this->apiKey = $_ENV['RESEND_API_KEY'] ?? null;
+        // Fallback sur getenv() au cas où $_ENV ne charge pas
+        $this->apiKey = $_ENV['RESEND_API_KEY'] ?? getenv('RESEND_API_KEY') ?? null;
     }
 
     public function sendOTP($toEmail, $code) {
         if (!$this->apiKey) {
             error_log("Erreur : Clé API Resend manquante dans le fichier .env");
+            // Décommenter la ligne ci-dessous en dev pour voir l'erreur directe à l'écran :
+            // die("Erreur : Clé API Resend manquante (RESEND_API_KEY est vide)");
             return false;
         }
 
         $url = 'https://api.resend.com/emails';
 
-        // Corps du message envoyé à l'API Resend
         $data = [
-            'from'    => 'Acme <onboarding@resend.dev>', // Expéditeur imposé par Resend en mode test
-            'to'      => [$toEmail],                     // Ton email de test
+            'from'    => 'Acme <onboarding@resend.dev>', // Expéditeur de test officiel
+            'to'      => [$toEmail],                     // Doit être TON email d'inscription Resend
             'subject' => 'Votre code de vérification OTP',
             'html'    => "
                 <div style='font-family: sans-serif; padding: 20px; color: #333;'>
@@ -34,28 +35,43 @@ class MailService {
             "
         ];
 
-        // Configuration du client cURL natif de PHP
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+        
+        // 🔒 CORRECTION 1 : Désactiver la vérification SSL en local (évite le crash cURL SSL)
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Authorization: Bearer ' . $this->apiKey,
+            'Authorization: Bearer ' . trim($this->apiKey),
             'Content-Type: application/json'
         ]);
 
-        // Exécution de la requête
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curlError = curl_error($ch);
         curl_close($ch);
 
-        // Si Resend répond avec un code de succès (200 ou 201), on retourne true
+        // Si la requête cURL a échoué techniquement
+        if ($response === false) {
+            error_log("Erreur cURL : " . $curlError);
+            // die("Erreur cURL locale : " . $curlError); // Pour déboguer à l'écran
+            return false;
+        }
+
+        // Si Resend renvoie 200 ou 201
         if ($httpCode === 200 || $httpCode === 201) {
             return true;
         }
 
-        // En cas d'erreur, on écrit la réponse de Resend dans les logs d'erreurs d'Apache/Nginx
-        error_log("Échec de l'envoi Resend (Code HTTP $httpCode) : " . $response);
+        // 🔍 CORRECTION 2 : Logger la vraie raison du refus par Resend
+        error_log("Échec Resend (HTTP $httpCode) : " . $response);
+        
+        // Pour voir la réponse brute directement dans le navigateur (décommenter si besoin de tester) :
+        // die("Erreur Resend HTTP $httpCode : " . $response);
+
         return false;
     }
 }

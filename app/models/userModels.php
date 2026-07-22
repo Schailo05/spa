@@ -130,4 +130,46 @@ public function getUserByEmail($email) {
     
     return $stmt->fetch(PDO::FETCH_ASSOC); 
 }
+public function getAllUsers() {
+    try {
+        // On récupère les utilisateurs avec leurs profils (jointure)
+        // Ajuste les noms des tables/colonnes si nécessaire selon ta BDD
+        $sql = "SELECT u.id_users, u.email, u.role, u.is_active, 
+                       p.first_name, p.last_name, p.phone 
+                FROM users u
+                LEFT JOIN users_profiles p ON u.id_users = p.id_users";
+        
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute();
+        
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        die("Erreur lors de la récupération des utilisateurs : " . $e->getMessage());
+    }
+}
+public function updateUserRole($userId, $newRole) {
+    try {
+        $sql = "UPDATE users SET role = :role WHERE id_users = :id";
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            'role' => $newRole,
+            'id' => $userId
+        ]);
+    } catch (PDOException $e) {
+        die("Erreur lors de la modification du rôle : " . $e->getMessage());
+    }
+}
+
+public function updateUserStatus($userId, $isActive) {
+    try {
+        $sql = "UPDATE users SET is_active = :status WHERE id_users = :id";
+        $stmt = $this->pdo->prepare($sql);
+        return $stmt->execute([
+            'status' => $isActive,
+            'id' => $userId
+        ]);
+    } catch (PDOException $e) {
+        die("Erreur lors de la modification du statut : " . $e->getMessage());
+    }
+}
 }
