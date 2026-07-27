@@ -57,7 +57,7 @@ class AuthController {
 
         } else {
             // Affichage du formulaire d'inscription (GET)
-            include_once 'app/view/auth/register.php';
+           include_once __DIR__ . '/../views/auth/register.php';
         }
     }
 
@@ -161,7 +161,7 @@ class AuthController {
         }
 
         // Chargement du fichier HTML
-        require_once dirname(__DIR__) . '/view/login.php';
+        require_once dirname(__DIR__) . '/views/auth/login.php';
     }
 
     public function logout() {

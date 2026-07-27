@@ -47,8 +47,7 @@
 
         </p>
 
-        <a
-            href="/reservation"
+        <a href="index.php?action=booking"
             class="mt-8 border-2 border-[#D4AF37]
                    text-[#D4AF37]
                    px-10 py-4
@@ -83,14 +82,14 @@
         <!-- Texte -->
         <div class="max-w-xl">
 
-            <p class="text-[#B08D2C] uppercase tracking-[0.25em] text-sm mb-5">
+            <p class="text-[#D4AF37] uppercase tracking-[0.25em] text-sm mb-5">
                 À propos de nous
             </p>
 
 
             <h2 class="text-4xl lg:text-5xl font-serif text-gray-900 leading-tight mb-6">
                 Un lieu où la beauté
-                <span class="text-[#B08D2C]">
+                <span class="text-[#D4AF37]">
                     rencontre le bien-être
                 </span>
             </h2>
@@ -103,8 +102,8 @@
             </p>
 
 
-            <a href="/apropos"
-               class="inline-block border border-[#B08D2C]
+            <a href="index.php?action=about"
+               class="inline-block border border-[#D4AF37]
                       text-[#B08D2C]
                       px-8 py-3
                       rounded-full
@@ -143,7 +142,7 @@
 
 
             <!-- Femmes -->
-            <a href="/spa/services/femmes"
+            <a href="index.php?action=services&categorie=Femmes"
                class="group relative h-[320px] overflow-hidden rounded-xl">
 
                 <img
@@ -197,7 +196,7 @@
 
 
             <!-- Hommes -->
-            <a href="/spa/services/hommes"
+            <a href="index.php?action=services&categorie=Hommes"
                class="group relative h-[320px] overflow-hidden rounded-xl">
 
                 <img

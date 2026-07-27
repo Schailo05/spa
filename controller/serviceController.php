@@ -1,54 +1,64 @@
 <?php
 
-require_once "../app/Models/Service.php";
+require_once __DIR__ . '/../models/serviceModel.php';
 
 class ServiceController
 {
     private Service $serviceModel;
 
-    public function __construct(PDO $db)
+    public function __construct(PDO $pdo)
     {
-        $this->serviceModel = new Service($db);
+        $this->serviceModel = new Service($pdo);
     }
 
+    /**
+     * Catalogue des services
+     */
+   /**
+ * Catalogue des services
+ */
+public function index()
+{
 
-    public function index()
+    if(isset($_GET['categorie']) && !empty($_GET['categorie']))
     {
-        // Récupération des services avec leurs catégories
-        $services = $this->serviceModel->getAllWithCategories();
 
-var_dump($services);
-exit;
-        // Regroupement des services par catégorie
-        $categories = [];
+        $services = $this->serviceModel
+                         ->getByCategory($_GET['categorie']);
 
-        foreach ($services as $service) {
-
-            $categorieId = $service['categorie_id'];
-
-            if (!isset($categories[$categorieId])) {
-
-                $categories[$categorieId] = [
-                    'id' => $service['categorie_id'],
-                    'nom' => $service['categorie_nom'],
-                    'description' => $service['categorie_description'],
-                    'image' => $service['categorie_image'],
-                    'services' => []
-                ];
-            }
-
-
-            $categories[$categorieId]['services'][] = [
-                'id' => $service['service_id'],
-                'nom' => $service['service_nom'],
-                'description' => $service['service_description'],
-                'prix' => $service['prix'],
-                'duree' => $service['duree'],
-                'image' => $service['service_image']
-            ];
-        }
-
-
-        require "../app/Views/services/index.php";
     }
+    else
+    {
+
+        $services = $this->serviceModel
+                         ->getAllWithCategories();
+
+    }
+
+    
+
+    require_once __DIR__ . '/../views/service/index.php';
+
+}
+    
+public function details(string $id)
+{
+    $service = $this->serviceModel->getById($id);
+
+    $avis = $this->serviceModel->getReviewsByService($id);
+
+    if (!$service) {
+        header("Location: index.php?action=services");
+        exit;
+    }
+
+    // Récupérer d'autres soins de la même catégorie
+    $servicesSimilaires = $this->serviceModel->getSimilarServices(
+        $service['categorie_id'],
+        $id
+    );
+
+    require_once __DIR__.'/../views/service/details.php';
+}
+
 }
