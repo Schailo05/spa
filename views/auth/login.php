@@ -134,11 +134,11 @@
 
                 <h2 class="font-serif text-3xl mt-3">
 
-                    Mon SPA
+                    Salon-
 
                     <span class="text-[#d4af37]">
 
-                        &
+                       Bien-Etre
 
                     </span>
 
@@ -216,15 +216,14 @@
 
                 <h1 class="font-serif text-3xl text-black mt-3">
 
-                    Mon SPA
+                    Salon-
 
                     <span class="text-[#d4af37]">
-
-                        &
+Bien-Etre
 
                     </span>
 
-                    Serenity
+                    
 
                 </h1>
 
