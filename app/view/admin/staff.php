@@ -25,7 +25,7 @@
                             200: '#F9ECC1',
                             300: '#F3E5AB',
                             400: '#E6CA65',
-                            500: '#D4AF37', // Or classique
+                            500: '#D4AF37',
                             600: '#B8860B',
                             700: '#996515',
                         }
@@ -36,7 +36,6 @@
     </script>
 
     <style>
-        /* Gradient Or Métallique Premium */
         .bg-gold-metallic {
             background: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
         }
@@ -49,7 +48,7 @@
 </head>
 <body class="bg-zinc-950 text-zinc-100 min-h-screen font-sans antialiased selection:bg-gold-500 selection:text-zinc-950">
 
-    <!-- En-tête avec fond SPA & effet luxueux -->
+    <!-- En-tête -->
     <header class="relative bg-cover bg-center border-b border-gold-500/20 overflow-hidden" 
             style="background-image: url('https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=1600&auto=format&fit=crop');">
         
@@ -84,73 +83,169 @@
 
     <main class="max-w-6xl mx-auto p-4 sm:p-6 mt-4 space-y-6">
 
-        <!-- Carte d'accueil / Synthèse -->
-        <div class="bg-zinc-900/80 backdrop-blur-xl border border-gold-500/20 rounded-2xl p-6 shadow-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-            <div>
-                <span class="text-gold-400 uppercase tracking-[0.2em] text-[10px] font-semibold block mb-1">Vue d'ensemble</span>
-                <h2 class="text-2xl font-serif text-white font-normal tracking-wide">Prestations à Venir</h2>
-                <p class="text-xs text-zinc-400 font-light mt-1">Retrouvez ici tous les rendez-vous qui vous ont été attribués.</p>
-            </div>
-            <span class="bg-zinc-950 border border-gold-500/30 text-gold-metallic font-serif text-base font-semibold px-4 py-2 rounded-full shadow-inner self-start sm:self-auto">
-                <?= count($appointments ?? []) ?> Rendez-vous
-            </span>
-        </div>
+        <?php $isAdmin = isset($_SESSION['user']) && ($_SESSION['user']['role'] ?? '') === 'admin'; ?>
 
-        <!-- Liste des RDV -->
-        <div class="bg-zinc-900/80 backdrop-blur-xl border border-gold-500/20 rounded-2xl overflow-hidden shadow-2xl mb-12">
-            <?php if (empty($appointments)): ?>
-                <div class="p-12 text-center text-zinc-400">
-                    <span class="text-4xl block mb-3 opacity-60">📅</span>
-                    <p class="text-lg font-serif text-zinc-300 font-normal">Aucun rendez-vous planifié</p>
-                    <p class="text-xs text-zinc-500 mt-1 font-light">Aucune prestation ne vous est assignée pour le moment.</p>
+        <?php if ($isAdmin): ?>
+            <!-- Interface Admin: Gestion de l'équipe et assignation des services -->
+            <div class="bg-zinc-900/80 backdrop-blur-xl border border-gold-500/20 rounded-2xl p-6 shadow-2xl">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <span class="text-gold-400 uppercase tracking-[0.2em] text-[10px] font-semibold block mb-1">Gestion d'équipe</span>
+                        <h2 class="text-2xl font-serif text-white font-normal tracking-wide">Tous les employés</h2>
+                        <p class="text-xs text-zinc-400 font-light mt-1">Liste complète des praticiens — cochez les services à leur attribuer.</p>
+                    </div>
+                    <a href="index.php?action=add_staff" class="text-xs bg-gold-metallic text-zinc-950 px-3 py-2 rounded-lg">Ajouter un employé</a>
                 </div>
-            <?php else: ?>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-zinc-950/90 border-b border-zinc-800 text-gold-300/90 text-[10px] uppercase tracking-[0.15em]">
-                                <th class="py-4 px-6">Date & Heure</th>
-                                <th class="py-4 px-6">Client</th>
-                                <th class="py-4 px-6">Soin</th>
-                                <th class="py-4 px-6">Durée</th>
-                                <th class="py-4 px-6 text-center">Statut</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-zinc-800/60 text-sm">
-                            <?php foreach ($appointments as $rdv): ?>
-                                <tr class="hover:bg-zinc-800/30 transition duration-150">
-                                    <td class="py-4 px-6 text-white font-medium whitespace-nowrap text-xs">
-                                        <div class="flex items-center gap-2">
-                                            <span class="text-gold-400">📅</span>
-                                            <span class="font-light tracking-wide font-mono text-gold-200"><?= date('d/m/Y à H:i', strtotime($rdv['appointment_date'])) ?></span>
+
+                <?php $flash = get_flash(); ?>
+                <?php if (!empty($flash)): ?>
+                    <div class="mb-4">
+                        <div class="rounded-xl px-4 py-3 text-sm <?= $flash['type'] === 'success' ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-100' : 'bg-rose-500/10 border border-rose-500/20 text-rose-100' ?>">
+                            <?= htmlspecialchars($flash['message']) ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
+
+                <form method="POST" action="index.php?action=update_staff_services">
+                    <?php echo csrf_input_field(); ?>
+                    <div class="space-y-4">
+                        <?php if (!empty($employees)): ?>
+                            <?php foreach ($employees as $emp): ?>
+                                <?php
+                                    $empId = $emp['id_users'] ?? $emp['id'] ?? 0;
+                                    $empName = trim(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? '')) ?: ($emp['email'] ?? 'Employé');
+                                    $assigned = $employeeServices[$empId] ?? [];
+                                ?>
+                                <div class="bg-zinc-950/5 border border-zinc-800/60 rounded-lg p-4">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <strong class="text-white"><?= htmlspecialchars($empName) ?></strong>
+                                            <div class="text-xs text-zinc-400 mt-1"><?= htmlspecialchars($emp['email'] ?? '') ?></div>
                                         </div>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <div class="font-medium text-white text-sm">
-                                            <?= htmlspecialchars(($rdv['client_firstname'] ?? '') . ' ' . ($rdv['client_lastname'] ?? '')) ?>
-                                        </div>
-                                        <div class="text-[11px] text-zinc-400 font-mono font-light mt-0.5"><?= htmlspecialchars($rdv['client_email'] ?? '') ?></div>
-                                    </td>
-                                    <td class="py-4 px-6">
-                                        <span class="text-gold-300 font-serif font-normal text-lg tracking-wide block">
-                                            <?= htmlspecialchars($rdv['service_name'] ?? 'Soin') ?>
-                                        </span>
-                                    </td>
-                                    <td class="py-4 px-6 text-xs text-zinc-400 font-light whitespace-nowrap">
-                                        ⏱️ <?= htmlspecialchars($rdv['duration'] ?? 30) ?> min
-                                    </td>
-                                    <td class="py-4 px-6 text-center whitespace-nowrap">
-                                        <span class="px-3 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-                                            <?= htmlspecialchars($rdv['status'] ?? 'Confirmé') ?>
-                                        </span>
-                                    </td>
-                                </tr>
+                                        <div class="text-xs text-zinc-400">ID: <?= htmlspecialchars((string)$empId) ?></div>
+                                    </div>
+
+                                    <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                        <?php if (!empty($services)): ?>
+                                            <?php foreach ($services as $s): ?>
+                                                <?php $sId = $s['id_services'] ?? $s['id'] ?? 0; ?>
+                                                <label class="inline-flex items-center gap-2">
+                                                    <input type="checkbox" name="staff_services[<?= htmlspecialchars((string)$empId) ?>][]" value="<?= htmlspecialchars((string)$sId) ?>" <?= in_array($sId, $assigned) ? 'checked' : '' ?> class="focus:ring-gold-500">
+                                                    <span><?= htmlspecialchars($s['name'] ?? 'Service') ?> <span class="text-zinc-500">(<?= htmlspecialchars((string)($s['duration'] ?? '')) ?>m)</span></span>
+                                                </label>
+                                            <?php endforeach; ?>
+                                        <?php else: ?>
+                                            <div class="text-zinc-500 text-xs italic">Aucun service défini.</div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
                             <?php endforeach; ?>
-                        </tbody>
-                    </table>
+                        <?php else: ?>
+                            <div class="text-zinc-400 italic">Aucun employé trouvé.</div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="mt-4">
+                        <button type="submit" class="bg-gold-metallic text-zinc-950 px-4 py-2 rounded-lg text-sm font-semibold">Enregistrer les attributions</button>
+                    </div>
+                </form>
+            </div>
+        <?php else: ?>
+            <!-- Vue Praticien (identique à l'existant) -->
+            <!-- Synthèse -->
+            <div class="bg-zinc-900/80 backdrop-blur-xl border border-gold-500/20 rounded-2xl p-6 shadow-2xl flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                    <span class="text-gold-400 uppercase tracking-[0.2em] text-[10px] font-semibold block mb-1">Vue d'ensemble</span>
+                    <h2 class="text-2xl font-serif text-white font-normal tracking-wide">Prestations à Venir</h2>
+                    <p class="text-xs text-zinc-400 font-light mt-1">Retrouvez ici tous les rendez-vous qui vous ont été attribués.</p>
                 </div>
-            <?php endif; ?>
-        </div>
+                <span class="bg-zinc-950 border border-gold-500/30 text-gold-metallic font-serif text-base font-semibold px-4 py-2 rounded-full shadow-inner self-start sm:self-auto">
+                    <?= !empty($appointments) ? count($appointments) : 0 ?> Rendez-vous
+                </span>
+            </div>
+
+            <!-- Liste des RDV -->
+            <div class="bg-zinc-900/80 backdrop-blur-xl border border-gold-500/20 rounded-2xl overflow-hidden shadow-2xl mb-12">
+                <?php if (empty($appointments)): ?>
+                    <div class="p-12 text-center text-zinc-400">
+                        <span class="text-4xl block mb-3 opacity-60">📅</span>
+                        <p class="text-lg font-serif text-zinc-300 font-normal">Aucun rendez-vous planifié</p>
+                        <p class="text-xs text-zinc-500 mt-1 font-light">Aucune prestation ne vous est assignée pour le moment.</p>
+                    </div>
+                <?php else: ?>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-zinc-950/90 border-b border-zinc-800 text-gold-300/90 text-[10px] uppercase tracking-[0.15em]">
+                                    <th class="py-4 px-6">Date & Heure</th>
+                                    <th class="py-4 px-6">Client</th>
+                                    <th class="py-4 px-6">Soin</th>
+                                    <th class="py-4 px-6">Durée</th>
+                                    <th class="py-4 px-6 text-center">Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-zinc-800/60 text-sm">
+                                <?php foreach ($appointments as $rdv): ?>
+                                    <?php 
+                                        // Extraction sécurisée des données
+                                        $dateRaw         = $rdv['appointment_date'] ?? null;
+                                        $formattedDate   = $dateRaw ? date('d/m/Y à H:i', strtotime($dateRaw)) : 'Non définie';
+                                        
+                                        $clientFirstName = $rdv['client_firstname'] ?? $rdv['first_name'] ?? '';
+                                        $clientLastName  = $rdv['client_lastname'] ?? $rdv['last_name'] ?? '';
+                                        $clientFullName  = trim($clientFirstName . ' ' . $clientLastName);
+                                        $clientEmail     = $rdv['client_email'] ?? $rdv['email'] ?? '';
+                                        
+                                        $serviceName     = $rdv['service_name'] ?? $rdv['name'] ?? 'Prestation';
+                                        $duration        = $rdv['duration'] ?? 30;
+                                        $status          = strtolower($rdv['status'] ?? 'confirme');
+                                    ?>
+                                    <tr class="hover:bg-zinc-800/30 transition duration-150">
+                                        <td class="py-4 px-6 text-white font-medium whitespace-nowrap text-xs">
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-gold-400">📅</span>
+                                                <span class="font-light tracking-wide font-mono text-gold-200"><?= htmlspecialchars($formattedDate) ?></span>
+                                            </div>
+                                        </td>
+                                        <td class="py-4 px-6">
+                                            <div class="font-medium text-white text-sm">
+                                                <?= htmlspecialchars(!empty($clientFullName) ? $clientFullName : 'Client Anonyme') ?>
+                                            </div>
+                                            <?php if (!empty($clientEmail)): ?>
+                                                <div class="text-[11px] text-zinc-400 font-mono font-light mt-0.5"><?= htmlspecialchars($clientEmail) ?></div>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td class="py-4 px-6">
+                                            <span class="text-gold-300 font-serif font-normal text-lg tracking-wide block">
+                                                <?= htmlspecialchars($serviceName) ?>
+                                            </span>
+                                        </td>
+                                        <td class="py-4 px-6 text-xs text-zinc-400 font-light whitespace-nowrap">
+                                            ⏱️ <?= htmlspecialchars((string)$duration) ?> min
+                                        </td>
+                                        <td class="py-4 px-6 text-center whitespace-nowrap">
+                                            <?php if ($status === 'confirme' || $status === 'confirmé'): ?>
+                                                <span class="px-3 py-1 rounded-full text-[11px] font-medium bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+                                                    Confirmé
+                                                </span>
+                                            <?php elseif ($status === 'annule' || $status === 'annulé'): ?>
+                                                <span class="px-3 py-1 rounded-full text-[11px] font-medium bg-rose-500/10 border border-rose-500/20 text-rose-400">
+                                                    Annulé
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="px-3 py-1 rounded-full text-[11px] font-medium bg-amber-500/10 border border-amber-500/20 text-amber-400">
+                                                    En attente
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
     </main>
 

@@ -77,6 +77,14 @@
     </header>
 
     <main class="max-w-7xl mx-auto p-4 sm:p-6 mt-4 space-y-10">
+        <?php $flash = get_flash(); ?>
+        <?php if (!empty($flash)): ?>
+            <div class="max-w-7xl mx-auto px-4 sm:px-0">
+                <div class="rounded-2xl border px-5 py-4 shadow-sm text-sm font-medium <?= $flash['type'] === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-100' : 'bg-rose-500/10 border-rose-500/20 text-rose-100' ?>">
+                    <?= htmlspecialchars($flash['message']) ?>
+                </div>
+            </div>
+        <?php endif; ?>
         
         <!-- 📊 SECTION 1 : CHIFFRES CLÉS -->
         <div>
@@ -222,6 +230,7 @@
                                         
                                         <td class="py-4 px-6">
                                             <form action="index.php?action=update_user" method="POST" class="flex items-center justify-center gap-3">
+                                                <?php echo csrf_input_field(); ?>
                                                 <input type="hidden" name="id_users" value="<?= $u['id_users'] ?? '' ?>">
                                                 
                                                 <select name="role" class="bg-zinc-950 border border-zinc-800 text-zinc-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-gold-500/80 transition duration-200">

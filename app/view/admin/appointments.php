@@ -25,7 +25,7 @@
                             200: '#F9ECC1',
                             300: '#F3E5AB',
                             400: '#E6CA65',
-                            500: '#D4AF37', // Or classique
+                            500: '#D4AF37',
                             600: '#B8860B',
                             700: '#996515',
                         }
@@ -36,7 +36,6 @@
     </script>
 
     <style>
-        /* Gradient Or Métallique Premium */
         .bg-gold-metallic {
             background: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
         }
@@ -49,7 +48,6 @@
 </head>
 <body class="bg-zinc-950 text-zinc-100 min-h-screen font-sans antialiased selection:bg-gold-500 selection:text-zinc-950">
 
-    <!-- En-tête avec fond SPA & effet luxueux -->
     <header class="relative bg-cover bg-center border-b border-gold-500/20 overflow-hidden" 
             style="background-image: url('https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=1600&auto=format&fit=crop');">
         
@@ -70,6 +68,14 @@
     </header>
 
     <main class="max-w-7xl mx-auto p-4 sm:p-6 mt-4">
+        <?php $flash = get_flash(); ?>
+        <?php if (!empty($flash)): ?>
+            <div class="max-w-7xl mx-auto mb-6 px-4 sm:px-0">
+                <div class="rounded-2xl border px-5 py-4 shadow-sm text-sm font-medium <?= $flash['type'] === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-100' : 'bg-rose-500/10 border-rose-500/20 text-rose-100' ?>">
+                    <?= htmlspecialchars($flash['message']) ?>
+                </div>
+            </div>
+        <?php endif; ?>
         
         <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-2">
             <div>
@@ -89,6 +95,8 @@
                             <th class="py-4 px-6">Date & Heure</th>
                             <th class="py-4 px-6">Client</th>
                             <th class="py-4 px-6">Prestation</th>
+                            <!-- COLONNE : Praticien attribué -->
+                            <th class="py-4 px-6">Praticien Assigné</th>
                             <th class="py-4 px-6 text-center">Statut</th>
                             <th class="py-4 px-6 text-right">Actions</th>
                         </tr>
@@ -96,33 +104,91 @@
                     <tbody class="divide-y divide-zinc-800/60 text-sm">
                         <?php if(!empty($appointments)): ?>
                             <?php foreach($appointments as $app): ?>
+                                <?php 
+                                    // 1. Client : Récupération sécurisée du nom & prénom
+                                    $clientFirstName = $app['client_firstname'] ?? $app['first_name'] ?? '';
+                                    $clientLastName  = $app['client_lastname'] ?? $app['last_name'] ?? '';
+                                    $clientFullName  = trim($clientFirstName . ' ' . $clientLastName);
+                                    $clientEmail     = $app['email'] ?? '';
+
+                                    // 2. Praticien : Récupération sécurisée
+                                    $empFirstName    = $app['employee_firstname'] ?? '';
+                                    $empLastName     = $app['employee_lastname'] ?? '';
+                                    $empFullName     = trim($empFirstName . ' ' . $empLastName);
+
+                                    // 3. Prestation & Détails
+                                    $serviceName     = $app['service_name'] ?? $app['name'] ?? 'Prestation inconnue';
+                                    $duration        = $app['duration'] ?? 0;
+                                    $price           = $app['price'] ?? 0;
+                                    $appointmentDate = isset($app['appointment_date']) ? date('d/m/Y à H:i', strtotime($app['appointment_date'])) : 'Date non définie';
+                                    $status          = strtolower($app['status'] ?? '');
+                                    $idAppointment   = $app['id_appointments'] ?? '';
+                                ?>
                                 <tr class="hover:bg-zinc-800/30 transition duration-150">
                                     
                                     <!-- Date -->
                                     <td class="py-4 px-6 text-white font-medium whitespace-nowrap text-xs">
                                         <div class="flex items-center gap-2">
                                             <span class="text-gold-400">📅</span>
-                                            <span class="font-light tracking-wide"><?= date('d/m/Y à H:i', strtotime($app['appointment_date'])) ?></span>
+                                            <span class="font-light tracking-wide"><?= htmlspecialchars($appointmentDate) ?></span>
                                         </div>
                                     </td>
                                     
                                     <!-- Client -->
                                     <td class="py-4 px-6">
-                                        <span class="block text-white font-medium text-sm"><?= htmlspecialchars($app['first_name'] . ' ' . $app['last_name']) ?></span>
-                                        <span class="text-xs text-zinc-400 font-mono text-[11px] font-light"><?= htmlspecialchars($app['email']) ?></span>
+                                        <span class="block text-white font-medium text-sm">
+                                            <?= htmlspecialchars(!empty($clientFullName) ? $clientFullName : 'Client Anonyme') ?>
+                                        </span>
+                                        <span class="text-xs text-zinc-400 font-mono text-[11px] font-light">
+                                            <?= htmlspecialchars($clientEmail) ?>
+                                        </span>
                                     </td>
                                     
                                     <!-- Prestation -->
                                     <td class="py-4 px-6">
-                                        <span class="block text-gold-300 font-serif font-normal text-lg tracking-wide"><?= htmlspecialchars($app['service_name']) ?></span>
-                                        <span class="text-xs text-zinc-400 font-light">⏱️ <?= $app['duration'] ?> min &nbsp;|&nbsp; <strong class="text-gold-metallic font-semibold"><?= $app['price'] ?> €</strong></span>
+                                        <span class="block text-gold-300 font-serif font-normal text-lg tracking-wide">
+                                            <?= htmlspecialchars($serviceName) ?>
+                                        </span>
+                                        <span class="text-xs text-zinc-400 font-light">
+                                            ⏱️ <?= htmlspecialchars((string)$duration) ?> min &nbsp;|&nbsp; 
+                                            <strong class="text-gold-metallic font-semibold"><?= htmlspecialchars((string)$price) ?> $</strong>
+                                        </span>
+                                    </td>
+
+                                    <!-- Praticien attribué -->
+                                    <td class="py-4 px-6">
+                                        <form action="index.php?action=assign_employee" method="POST" class="flex items-center gap-1.5">
+                                            <input type="hidden" name="id_appointment" value="<?= htmlspecialchars((string)($app['id_appointments'] ?? '')) ?>">
+        <?php echo csrf_input_field(); ?>
+                                            <select name="id_employee" 
+                                                    class="bg-zinc-950 text-zinc-200 border border-zinc-800 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-gold-500 transition duration-200">
+                                                <option value="">-- Non assigné --</option>
+                                                <?php if (!empty($employees)): ?>
+                                                    <?php foreach ($employees as $emp): ?>
+                                                        <?php 
+                                                            $empId   = $emp['id_users'] ?? '';
+                                                            $empName = trim(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? ''));
+                                                            $isSelected = (isset($app['id_employee']) && $app['id_employee'] == $empId) ? 'selected' : '';
+                                                        ?>
+                                                        <option value="<?= htmlspecialchars((string)$empId) ?>" <?= $isSelected ?>>
+                                                            🧑‍⚕️ <?= htmlspecialchars($empName) ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                <?php endif; ?>
+                                            </select>
+
+                                            <button type="submit"
+                                                    class="bg-gold-metallic text-zinc-950 font-semibold px-2.5 py-1 rounded-lg text-xs hover:opacity-90 active:scale-95 transition duration-150">
+                                                OK
+                                            </button>
+                                        </form>
                                     </td>
                                     
                                     <!-- Statut Badge -->
                                     <td class="py-4 px-6 text-center whitespace-nowrap">
-                                        <?php if($app['status'] === 'confirme'): ?>
+                                        <?php if($status === 'confirme' || $status === 'confirmé'): ?>
                                             <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-[11px] font-medium">Confirmé</span>
-                                        <?php elseif($app['status'] === 'annule'): ?>
+                                        <?php elseif($status === 'annule' || $status === 'annulé'): ?>
                                             <span class="bg-rose-500/10 text-rose-400 border border-rose-500/20 px-3 py-1 rounded-full text-[11px] font-medium">Annulé</span>
                                         <?php else: ?>
                                             <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1 rounded-full text-[11px] font-medium">En attente</span>
@@ -132,15 +198,15 @@
                                     <!-- Actions rapides -->
                                     <td class="py-4 px-6 text-right whitespace-nowrap">
                                         <div class="inline-flex items-center gap-2">
-                                            <?php if($app['status'] !== 'confirme'): ?>
-                                                <a href="index.php?action=admin_appointments&change_status=confirme&id=<?= $app['id_appointments'] ?>" 
+                                            <?php if($status !== 'confirme' && $status !== 'confirmé'): ?>
+                                                <a href="index.php?action=admin_appointments&change_status=confirme&id=<?= $idAppointment ?>" 
                                                    class="text-xs bg-gold-metallic hover:opacity-95 text-zinc-950 font-semibold px-3.5 py-1.5 rounded-xl transition duration-200 shadow-md active:scale-95">
                                                     Accepter
                                                 </a>
                                             <?php endif; ?>
                                             
-                                            <?php if($app['status'] !== 'annule'): ?>
-                                                <a href="index.php?action=admin_appointments&change_status=annule&id=<?= $app['id_appointments'] ?>" 
+                                            <?php if($status !== 'annule' && $status !== 'annulé'): ?>
+                                                <a href="index.php?action=admin_appointments&change_status=annule&id=<?= $idAppointment ?>" 
                                                    class="text-xs bg-zinc-950 text-zinc-400 hover:text-rose-300 hover:bg-rose-950/40 border border-zinc-800 hover:border-rose-500/30 px-3.5 py-1.5 rounded-xl transition duration-200">
                                                     Annuler
                                                 </a>
@@ -152,7 +218,7 @@
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="5" class="py-10 text-center text-zinc-500 italic font-light">Aucun rendez-vous planifié pour le moment.</td>
+                                <td colspan="6" class="py-10 text-center text-zinc-500 italic font-light">Aucun rendez-vous planifié pour le moment.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
@@ -161,6 +227,6 @@
         </div>
 
     </main>
-
+   
 </body>
 </html>

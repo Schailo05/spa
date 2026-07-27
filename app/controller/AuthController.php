@@ -11,54 +11,47 @@ class AuthController {
     }
 
     public function register() {
+        $error = null;
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $email     = filter_var(trim($_POST['email'] ?? ''), FILTER_SANITIZE_EMAIL);
+            $password  = trim($_POST['password'] ?? '');
+            $firstName = trim($_POST['first_name'] ?? '');
+            $lastName  = trim($_POST['last_name'] ?? '');
+            $phone     = trim($_POST['phone'] ?? '');
 
-            $email     = filter_var(trim($_POST['email']), FILTER_SANITIZE_EMAIL);
-            $password  = trim($_POST['password']);
-            $firstName = htmlspecialchars(trim($_POST['first_name']));
-            $lastName  = htmlspecialchars(trim($_POST['last_name']));
-            $phone     = htmlspecialchars(trim($_POST['phone']));
-
-            // Validations de sécurité
             if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                die("Format d'email invalide.");
-            } 
-            if (strlen($password) < 8) {
-                die("Le mot de passe doit contenir au moins 8 caractères");
-            }
-            if ($this->userModel->emailExists($email)) {
-                die('Cet email est déjà utilisé. Veuillez en choisir un autre.');
-            }
-            
-            // Génération du code OTP à 6 chiffres
-            $code = (string) random_int(100000, 999999);
-
-            // Sauvegarde en base de données
-            $this->userModel->saveVerificationCode($email, $code);
-
-            // Stockage temporaire des infos en session avant validation OTP
-            $_SESSION['temp_user'] = [
-                'email'      => $email,
-                'password'   => password_hash($password, PASSWORD_DEFAULT), 
-                'first_name' => $firstName,
-                'last_name'  => $lastName,
-                'phone'      => $phone
-            ];
-           
-            // Envoi de l'email via ton service MailService (Resend)
-            $emailSent = $this->mailService->sendOTP($email, $code);
-
-            if ($emailSent) {
-                header('Location: index.php?action=verify_code');
-                exit();
+                $error = "Format d'email invalide.";
+            } elseif (empty($firstName) || empty($lastName)) {
+                $error = "Le prénom et le nom sont obligatoires.";
+            } elseif (strlen($password) < 8) {
+                $error = "Le mot de passe doit contenir au moins 8 caractères.";
+            } elseif ($this->userModel->emailExists($email)) {
+                $error = "Cet email est déjà utilisé. Veuillez en choisir un autre.";
             } else {
-                die("Erreur technique : Impossible d'envoyer l'email de validation.");
-            }
+                $code = (string) random_int(100000, 999999);
+                $this->userModel->saveVerificationCode($email, $code);
 
-        } else {
-            // Affichage du formulaire d'inscription (GET)
-            include_once 'app/view/auth/register.php';
+                $_SESSION['temp_user'] = [
+                    'email'      => $email,
+                    'password'   => password_hash($password, PASSWORD_DEFAULT),
+                    'first_name' => htmlspecialchars($firstName),
+                    'last_name'  => htmlspecialchars($lastName),
+                    'phone'      => htmlspecialchars($phone)
+                ];
+
+                $emailSent = $this->mailService->sendOTP($email, $code);
+
+                if ($emailSent) {
+                    header('Location: index.php?action=verify_code');
+                    exit();
+                }
+
+                $error = "Erreur technique : Impossible d'envoyer l'email de validation.";
+            }
         }
+
+        include_once 'app/view/auth/register.php';
     }
 
     public function verifyCode() {
@@ -100,6 +93,86 @@ class AuthController {
         include_once 'app/view/auth/verify_code.php';
     }
 
+    public function forgotPassword() {
+        $error = null;
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $email = filter_var(trim($_POST['email'] ?? ''), FILTER_SANITIZE_EMAIL);
+
+            if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $error = "Veuillez fournir une adresse email valide.";
+            } else {
+                $user = $this->userModel->getUserByEmail($email);
+                $token = bin2hex(random_bytes(32));
+
+                if ($user && $this->userModel->savePasswordResetToken($email, $token)) {
+                    $resetUrl = $this->buildResetUrl($token);
+                    $emailSent = $this->mailService->sendPasswordReset($email, $resetUrl);
+                    if (!$emailSent) {
+                        $error = "Impossible d'envoyer le mail de réinitialisation. Veuillez réessayer plus tard.";
+                    }
+                }
+
+                if (!$error) {
+                    set_flash('success', "Si cet email existe, vous allez recevoir un lien de réinitialisation.");
+                    header('Location: index.php?action=login');
+                    exit();
+                }
+            }
+        }
+
+        include_once 'app/view/auth/forgot_password.php';
+    }
+
+    public function resetPassword() {
+        $error = null;
+        $token = $_SERVER['REQUEST_METHOD'] === 'POST' ? trim($_POST['token'] ?? '') : trim($_GET['token'] ?? '');
+        $resetRequest = null;
+
+        if (empty($token)) {
+            $error = "Le jeton de réinitialisation est manquant.";
+        } else {
+            $resetRequest = $this->userModel->getPasswordResetByToken($token);
+            if (!$resetRequest) {
+                $error = "Lien invalide ou expiré. Demandez un nouveau lien de réinitialisation.";
+            }
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
+            $password = trim($_POST['password'] ?? '');
+            $confirmPassword = trim($_POST['confirm_password'] ?? '');
+
+            if (strlen($password) < 8) {
+                $error = "Le mot de passe doit contenir au moins 8 caractères.";
+            } elseif ($password !== $confirmPassword) {
+                $error = "Les mots de passe ne correspondent pas.";
+            } else {
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                $updateSucceeded = $this->userModel->updatePasswordByEmail($resetRequest['email'], $hashedPassword);
+
+                if ($updateSucceeded) {
+                    $this->userModel->deletePasswordResetToken($token);
+                    set_flash('success', "Votre mot de passe a bien été réinitialisé. Vous pouvez maintenant vous connecter.");
+                    header('Location: index.php?action=login');
+                    exit();
+                }
+
+                $error = "Une erreur est survenue lors de la mise à jour du mot de passe.";
+            }
+        }
+
+        include_once 'app/view/auth/reset_password.php';
+    }
+
+    private function buildResetUrl(string $token): string {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $basePath = dirname($_SERVER['SCRIPT_NAME']);
+        $basePath = $basePath === '/' ? '' : $basePath;
+
+        return sprintf('%s://%s%s/index.php?action=reset_password&token=%s', $scheme, $host, $basePath, urlencode($token));
+    }
+
    public function login() {
         // Si déjà connecté, redirection immédiate selon le rôle stocké en session
         if (isset($_SESSION['user'])) {
@@ -136,10 +209,13 @@ class AuthController {
                         session_regenerate_id(true);
 
                         // Stockage des informations utilisateur
+                        $role = strtolower(trim((string) ($user['role'] ?? 'client')));
+
                         $_SESSION['user'] = [
                             'id'         => $user['id_users'],
+                            'id_users'   => $user['id_users'],
                             'email'      => $user['email'],
-                            'role'       => $user['role'],
+                            'role'       => $role,
                             'first_name' => $user['first_name'],
                             'last_name'  => $user['last_name']
                         ];

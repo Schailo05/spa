@@ -58,6 +58,7 @@ class AdminController {
 
             if (!empty($name) && $duration > 0 && $price > 0) {
                 $this->serviceModel->addService($name, $description, $duration, $price);
+                set_flash('success', 'Soin ajouté avec succès.');
                 header('Location: index.php?action=admin_services');
                 exit();
             }
@@ -66,6 +67,7 @@ class AdminController {
         // Si on demande une suppression (GET)
         if (isset($_GET['delete_id'])) {
             $this->serviceModel->deleteService((int)$_GET['delete_id']);
+            set_flash('success', 'Soin supprimé.');
             header('Location: index.php?action=admin_services');
             exit();
         }
@@ -85,6 +87,7 @@ class AdminController {
         // Si l'admin change le statut d'un rendez-vous (GET)
         if (isset($_GET['change_status']) && isset($_GET['id'])) {
             $this->appointmentModel->updateStatus($_GET['id'], $_GET['change_status']);
+            set_flash('success', 'Statut du rendez-vous mis à jour.');
             header('Location: index.php?action=admin_appointments');
             exit();
         }
@@ -134,7 +137,116 @@ public function updateStaffServices() {
         }
     }
 
+    set_flash('success', 'Attributions mises à jour.');
     header('Location: index.php?action=admin_staff');
     exit();
+}
+
+// --- NOUVELLE MÉTHODE : Créer/Ajouter un employé ---
+    public function addStaff() {
+    if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+        header('Location: index.php?action=login');
+        exit();
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $email     = trim($_POST['email'] ?? '');
+        $password  = $_POST['password'] ?? '';
+        $firstName = trim($_POST['first_name'] ?? '');
+        $lastName  = trim($_POST['last_name'] ?? '');
+        $phone     = trim($_POST['phone'] ?? '');
+
+        if (!empty($email) && !empty($password)) {
+            // Hachage sécurisé du mot de passe
+            $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+
+            // Préparation du tableau de données compatible avec ton UserModel
+            $data = [
+                'email'      => $email,
+                'password'   => $hashedPassword,
+                'first_name' => $firstName,
+                'last_name'  => $lastName,
+                'phone'      => $phone,
+                'role'       => 'employe' // On force le rôle à 'employe'
+            ];
+
+            // Création de l'utilisateur + profil
+            $newUserId = $this->userModel->createUser($data);
+
+            if ($newUserId) {
+                set_flash('success', 'Nouvel employé créé avec succès.');
+                header('Location: index.php?action=admin_staff');
+                exit();
+            }
+        }
+    }
+
+    set_flash('error', 'Échec de la création de l’employé. Veuillez vérifier les informations saisies.');
+    header('Location: index.php?action=admin_staff');
+    exit();
+}
+
+public function updateUser() {
+    if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+        header('Location: index.php?action=login');
+        exit();
+    }
+
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $userId   = $_POST['id_users'] ?? null;
+        $role     = $_POST['role'] ?? 'client';
+        $isActive = isset($_POST['is_active']) ? 1 : 0;
+
+        if ($userId) {
+            $this->userModel->updateUserStatusAndRole($userId, $role, $isActive);
+        }
+    }
+
+    set_flash('success', 'Utilisateur mis à jour.');
+    header('Location: index.php?action=admin_dashboard');
+    exit();
+}
+public function appointments() {
+    // Vérification de la session admin
+    if (!isset($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+        header('Location: index.php?action=login');
+        exit();
+    }
+
+    // Traitement du changement de statut via URL
+    if (isset($_GET['change_status']) && isset($_GET['id'])) {
+        $status = $_GET['change_status'];
+        $appointmentId = (int)$_GET['id'];
+
+        if (in_array($status, ['confirme', 'annule', 'en attente'])) {
+            $this->appointmentModel->updateStatus($appointmentId, $status);
+        }
+
+        header('Location: index.php?action=admin_appointments');
+        exit();
+    }
+
+    $appointments = $this->appointmentModel->getAllAppointments();
+    $employees = [];
+    if ($this->employeeModel) {
+        $employees = $this->employeeModel->getAllEmployees();
+    }
+
+    require_once __DIR__ . '/../view/admin/appointments.php';
+}
+
+
+public function showSkillsMatrix() {
+    // 1. Récupérer tous les employés
+    $employees = $this->userModel->getEmployees();
+    
+    // 2. Récupérer tous les services/soins
+    $services = $this->serviceModel->getAllServices();
+
+    // 3. Récupérer les compétences déjà attribuées (table employee_services)
+    $assignedSkills = $this->appointmentModel->getAllEmployeeServices(); 
+
+    // 4. Charger la vue
+    require_once __DIR__ . '/../view/admin/skills_assignment.php';
 }
 }

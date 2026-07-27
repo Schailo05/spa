@@ -104,7 +104,7 @@
             <?php endif; ?>
             
             <form class="space-y-4" action="index.php?action=register" method="POST">
-                
+                <?php echo csrf_input_field(); ?>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label for="first_name" class="block text-[10px] font-semibold text-gold-300/90 mb-1.5 uppercase tracking-[0.15em]">Prénom</label>

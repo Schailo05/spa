@@ -46,9 +46,19 @@
 
     <main class="max-w-6xl mx-auto p-6 space-y-8 mt-4">
 
+        <?php $flash = get_flash(); ?>
+        <?php if (!empty($flash)): ?>
+            <div class="max-w-6xl mx-auto px-4 sm:px-0">
+                <div class="rounded-2xl border px-5 py-4 shadow-sm text-sm font-medium 
+                    <?= $flash['type'] === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-100' : 'bg-rose-500/10 border-rose-500/20 text-rose-100' ?>">
+                    <?= htmlspecialchars($flash['message']) ?>
+                </div>
+            </div>
+        <?php endif; ?>
+
         <!-- Carte Profil & Actions Rapides -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+
             <!-- Carte Profil -->
             <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
                 <div>
@@ -69,6 +79,42 @@
                 <div class="mt-6 pt-4 border-t border-slate-700/60 text-xs text-slate-400 flex items-center gap-2">
                     <span>✨ Statut du compte :</span>
                     <span class="text-emerald-400 font-semibold">Actif</span>
+                </div>
+            </div>
+
+            <!-- Carte Prochain RDV -->
+            <div class="bg-gradient-to-br from-emerald-900/30 to-slate-800 border border-emerald-500/20 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+                <div>
+                    <div class="text-3xl mb-3">🕘</div>
+                    <h3 class="text-lg font-bold text-white mb-1">Prochain rendez-vous</h3>
+                    <?php
+                        $next = null;
+                        if (!empty($userAppointments)) {
+                            usort($userAppointments, function($a, $b){
+                                return strtotime($a['appointment_date']) <=> strtotime($b['appointment_date']);
+                            });
+                            $now = time();
+                            foreach ($userAppointments as $appt) {
+                                if (strtotime($appt['appointment_date']) >= $now) { $next = $appt; break; }
+                            }
+                        }
+                    ?>
+                    <?php if ($next): ?>
+                        <p class="text-sm text-slate-300 mt-2">Le <?= date('d/m/Y \à H:i', strtotime($next['appointment_date'])) ?> avec <strong class="text-white"><?= htmlspecialchars(trim(($next['employee_firstname'] ?? '') . ' ' . ($next['employee_lastname'] ?? ''))) ?: 'Praticien' ?></strong></p>
+                    <?php else: ?>
+                        <p class="text-sm text-slate-300 mt-2">Aucun rendez-vous à venir. Réservez votre prochain soin.</p>
+                    <?php endif; ?>
+                </div>
+
+                <div class="mt-6 flex gap-2">
+                    <a href="index.php?action=booking" class="flex-1 text-center bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold py-2 rounded-xl transition text-sm">Réserver</a>
+                    <?php if ($next): ?>
+                        <form action="index.php?action=cancel_appointment" method="POST" class="m-0">
+                            <?php echo csrf_input_field(); ?>
+                            <input type="hidden" name="id_appointments" value="<?= htmlspecialchars($next['id_appointments'] ?? '') ?>">
+                            <button type="submit" class="text-sm px-3 py-2 rounded-xl border border-rose-600 text-rose-300 hover:bg-rose-800">Annuler</button>
+                        </form>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -156,7 +202,7 @@
                                         <?= htmlspecialchars(($rdv['staff_firstname'] ?? '') . ' ' . ($rdv['staff_lastname'] ?? 'Sur place')) ?>
                                     </td>
                                     <td class="p-3 text-slate-300">
-                                        <?= htmlspecialchars($rdv['price'] ?? '-') ?> €
+                                        <?= htmlspecialchars($rdv['price'] ?? '-') ?> $
                                     </td>
                                     <td class="p-3">
                                         <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">

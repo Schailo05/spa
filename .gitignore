@@ -5,5 +5,5 @@
 .DS_Store
 Thumbs.db
 
-# Si jamais tu utilises Composer plus tard, on ignore souvent le dossier vendor
-# vendor/
+# Ignore le dossier vendor de Composer
+vendor/

@@ -25,7 +25,7 @@
                             200: '#F9ECC1',
                             300: '#F3E5AB',
                             400: '#E6CA65',
-                            500: '#D4AF37', // Or classique
+                            500: '#D4AF37',
                             600: '#B8860B',
                             700: '#996515',
                         }
@@ -36,7 +36,6 @@
     </script>
 
     <style>
-        /* Gradient Or Métallique Premium */
         .bg-gold-metallic {
             background: linear-gradient(135deg, #bf953f 0%, #fcf6ba 25%, #b38728 50%, #fbf5b7 75%, #aa771c 100%);
         }
@@ -49,7 +48,6 @@
 </head>
 <body class="bg-zinc-950 text-zinc-100 min-h-screen font-sans antialiased selection:bg-gold-500 selection:text-zinc-950">
 
-    <!-- En-tête avec fond SPA & effet luxueux -->
     <header class="relative bg-cover bg-center border-b border-gold-500/20 overflow-hidden" 
             style="background-image: url('https://images.unsplash.com/photo-1544161515-4ab6ce6db874?q=80&w=1600&auto=format&fit=crop');">
         
@@ -70,6 +68,14 @@
     </header>
 
     <main class="max-w-7xl mx-auto p-4 sm:p-6 mt-4 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <?php $flash = get_flash(); ?>
+        <?php if (!empty($flash)): ?>
+            <div class="max-w-7xl mx-auto px-4 sm:px-0 mb-6">
+                <div class="rounded-2xl border px-5 py-4 shadow-sm text-sm font-medium <?= $flash['type'] === 'success' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-100' : 'bg-rose-500/10 border-rose-500/20 text-rose-100' ?>">
+                    <?= htmlspecialchars($flash['message']) ?>
+                </div>
+            </div>
+        <?php endif; ?>
         
         <!-- Formulaire d'Ajout de Soin -->
         <div class="bg-zinc-900/80 backdrop-blur-xl border border-gold-500/20 p-6 sm:p-8 rounded-2xl shadow-2xl h-fit">
@@ -79,6 +85,7 @@
             </div>
 
             <form action="index.php?action=admin_services" method="POST" class="space-y-4">
+                <?php echo csrf_input_field(); ?>
                 <input type="hidden" name="add_service" value="1">
                 
                 <div>
@@ -98,12 +105,12 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[10px] font-semibold text-gold-300/90 mb-1.5 uppercase tracking-[0.15em]">Durée (min)</label>
-                        <input type="number" name="duration" placeholder="60" required 
+                        <input type="number" name="duration" placeholder="60" min="1" required 
                                class="w-full px-3.5 py-2.5 bg-zinc-950/80 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-gold-500/80 focus:ring-1 focus:ring-gold-500/30 text-xs transition-all duration-300">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-semibold text-gold-300/90 mb-1.5 uppercase tracking-[0.15em]">Prix (€)</label>
-                        <input type="number" step="0.01" name="price" placeholder="50" required 
+                        <label class="block text-[10px] font-semibold text-gold-300/90 mb-1.5 uppercase tracking-[0.15em]">Prix ($)</label>
+                        <input type="number" step="0.01" min="0" name="price" placeholder="50" required 
                                class="w-full px-3.5 py-2.5 bg-zinc-950/80 border border-zinc-800 rounded-xl text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-gold-500/80 focus:ring-1 focus:ring-gold-500/30 text-xs transition-all duration-300">
                     </div>
                 </div>
@@ -142,19 +149,28 @@
                     <tbody class="divide-y divide-zinc-800/60 text-sm">
                         <?php if(!empty($services)): ?>
                             <?php foreach($services as $s): ?>
+                                <?php 
+                                    $serviceId          = $s['id_services'] ?? $s['id'] ?? 0;
+                                    $serviceName        = $s['name'] ?? 'Soin sans nom';
+                                    $serviceDescription = $s['description'] ?? '';
+                                    $serviceDuration    = $s['duration'] ?? 0;
+                                    $servicePrice       = $s['price'] ?? 0;
+                                ?>
                                 <tr class="hover:bg-zinc-800/30 transition duration-150">
                                     <td class="py-4 px-6">
-                                        <strong class="text-white block font-serif text-lg font-normal tracking-wide"><?= htmlspecialchars($s['name']) ?></strong>
-                                        <span class="text-xs text-zinc-400 leading-relaxed font-light block mt-0.5"><?= htmlspecialchars($s['description']) ?></span>
+                                        <strong class="text-white block font-serif text-lg font-normal tracking-wide"><?= htmlspecialchars($serviceName) ?></strong>
+                                        <?php if(!empty($serviceDescription)): ?>
+                                            <span class="text-xs text-zinc-400 leading-relaxed font-light block mt-0.5"><?= htmlspecialchars($serviceDescription) ?></span>
+                                        <?php endif; ?>
                                     </td>
                                     <td class="py-4 px-6 text-zinc-300 whitespace-nowrap text-xs font-light">
-                                        ⏱️ <?= $s['duration'] ?> min
+                                        ⏱️ <?= htmlspecialchars((string)$serviceDuration) ?> min
                                     </td>
                                     <td class="py-4 px-6 text-gold-metallic font-serif font-semibold text-lg whitespace-nowrap">
-                                        <?= $s['price'] ?> €
+                                        <?= htmlspecialchars((string)$servicePrice) ?> $
                                     </td>
                                     <td class="py-4 px-6 text-center whitespace-nowrap">
-                                        <a href="index.php?action=admin_services&delete_id=<?= $s['id_services'] ?>" 
+                                        <a href="index.php?action=admin_services&delete_id=<?= htmlspecialchars((string)$serviceId) ?>" 
                                            onclick="return confirm('Supprimer cette prestation ?')" 
                                            class="text-xs bg-rose-950/40 text-rose-300 hover:bg-rose-900/60 hover:text-white border border-rose-500/30 px-3.5 py-1.5 rounded-xl transition duration-200 inline-block font-medium">
                                             Supprimer
